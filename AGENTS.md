@@ -39,7 +39,19 @@ This includes **source code comments** — inline comments and Javadoc must all 
 
 ## Build Commands
 
-Each example is an independent Gradle project. Run commands from the example's directory.
+Each example is an independent Gradle build. You can either run commands from the example's directory or use the root-level composite build to drive both examples at once.
+
+### Composite build (run from repository root)
+
+The root `settings.gradle.kts` includes both examples as `includeBuild(...)` targets. Lifecycle tasks (`build`, `clean`, `assemble`, `check`) are aggregated so a single root-level invocation drives both examples.
+
+```bash
+./gradlew build              # Build both examples (all subprojects + tests)
+./gradlew clean              # Clean both examples
+./gradlew check              # Run checks in both examples
+```
+
+Per-example tasks are still reachable via their included-build paths, e.g. `./gradlew :plugwerk-springboot-thymeleaf-example:bootRun`.
 
 ### Java CLI Example (run from `plugwerk-java-cli-example/`)
 
@@ -77,6 +89,9 @@ examples/
 ├── LICENSE                                      # Apache-2.0
 ├── license-header.txt                           # Apache-2.0 header for Spotless
 ├── docker-compose.yml                           # Local Plugwerk server (GHCR SNAPSHOT image)
+├── settings.gradle.kts                          # Composite build: includes both examples
+├── build.gradle.kts                             # Root aggregator for lifecycle tasks
+├── gradlew, gradlew.bat, gradle/wrapper/        # Root Gradle wrapper for composite build
 ├── .github/workflows/ci.yml                     # CI: builds both examples
 ├── plugwerk-java-cli-example/
 │   ├── build.gradle.kts                         # Root build with shared conventions
@@ -177,7 +192,7 @@ Every pull request **must** be created with:
 
 ## Key Design Constraints
 
-- **Each example is self-contained** — it builds independently with its own `settings.gradle.kts` and Gradle wrapper. Do not merge them into a single Gradle project.
+- **Each example is self-contained** — it builds independently with its own `settings.gradle.kts` and Gradle wrapper. Do not merge them into a single Gradle project. The root-level composite build (`settings.gradle.kts` + `includeBuild(...)`) aggregates lifecycle tasks across both examples without collapsing them into one multi-module build.
 - **PF4J plugin packaging** — each example plugin builds a PF4J-compatible ZIP with `MANIFEST.MF` at the root and JARs in `lib/`. Host-provided dependencies (plugwerk-spi, pf4j, slf4j) are excluded from the ZIP.
 - **plugwerk-client-plugin is a runtime dependency** — it is loaded as a PF4J plugin from the `plugins/` directory, not as a compile dependency. The `copyClientPlugin` task downloads the PF4J ZIP artifact from GitHub Packages.
 - **Extension-point API pattern** — each example defines its own API module (e.g. `plugwerk-java-cli-example-api`) that both the host app and plugins depend on. This is the standard PF4J pattern for type-safe extension points.
