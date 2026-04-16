@@ -10,6 +10,8 @@ services:
       PLUGWERK_JWT_SECRET: "dev-only-secret-min-32-characters!!"
       PLUGWERK_ENCRYPTION_KEY: "dev-encrypt-16ch"
       PLUGWERK_AUTH_ADMIN_PASSWORD: admin
+    volumes:
+      - plugwerk-artifacts:/var/plugwerk/artifacts
     depends_on:
       postgres:
         condition: service_healthy
@@ -32,3 +34,4 @@ services:
 
 volumes:
   pgdata:
+  plugwerk-artifacts:
