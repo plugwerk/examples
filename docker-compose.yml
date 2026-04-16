@@ -1,0 +1,34 @@
+services:
+  plugwerk-server:
+    image: ghcr.io/plugwerk/plugwerk-server:snapshot
+    ports:
+      - "8080:8080"
+    environment:
+      PLUGWERK_DB_URL: jdbc:postgresql://postgres:5432/plugwerk
+      PLUGWERK_DB_USERNAME: plugwerk
+      PLUGWERK_DB_PASSWORD: plugwerk
+      PLUGWERK_JWT_SECRET: "dev-only-secret-min-32-characters!!"
+      PLUGWERK_ENCRYPTION_KEY: "dev-encrypt-16ch"
+      PLUGWERK_AUTH_ADMIN_PASSWORD: admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: plugwerk
+      POSTGRES_USER: plugwerk
+      POSTGRES_PASSWORD: plugwerk
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plugwerk"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
