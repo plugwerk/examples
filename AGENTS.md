@@ -190,6 +190,23 @@ Every pull request **must** be created with:
 - **Labels** — at minimum one label matching the change type (e.g. `enhancement`, `chore`, `documentation`)
 - **Milestone** — the current milestone
 
+### Adding commits to an existing PR
+
+Before pushing follow-up commits to a feature branch, **always verify that the existing PR is still open**:
+
+```bash
+gh pr view <number> --json state,mergedAt
+```
+
+- If `state` is `OPEN` → push the new commits to the existing branch as usual.
+- If `state` is `MERGED` or `CLOSED` → **do not** push to the merged branch. Instead:
+  1. Switch to `main` and pull the latest state.
+  2. Create a new feature branch (`feature/<issue-id>_<short-description>` or `fix/<short-description>`).
+  3. Cherry-pick or re-apply the commits on the new branch.
+  4. Open a new PR that references the original via `Follow-up to #<original-pr>`.
+
+Rationale: pushing to a merged PR's branch does not reopen the PR; the commits end up orphaned on a stale branch and are never reviewed or merged.
+
 ## Key Design Constraints
 
 - **Each example is self-contained** — it builds independently with its own `settings.gradle.kts` and Gradle wrapper. Do not merge them into a single Gradle project. The root-level composite build (`settings.gradle.kts` + `includeBuild(...)`) aggregates lifecycle tasks across both examples without collapsing them into one multi-module build.
