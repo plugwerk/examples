@@ -20,6 +20,7 @@ import io.plugwerk.example.cli.command.ListCommand;
 import io.plugwerk.example.cli.command.SearchCommand;
 import io.plugwerk.example.cli.command.UninstallCommand;
 import io.plugwerk.example.cli.command.UpdateCommand;
+import io.plugwerk.spi.PlugwerkConfig;
 import io.plugwerk.spi.extension.PlugwerkMarketplace;
 import java.nio.file.Path;
 import org.pf4j.PluginManager;
@@ -93,21 +94,34 @@ public class PlugwerkCli implements Runnable {
   private CommandLine commandLine;
 
   /**
-   * Returns the {@link PlugwerkMarketplace} facade, initializing the PF4J plugin manager on first
-   * call. If {@link #setPluginManager(PluginManager)} was already called (eager startup init), the
-   * existing manager is reused.
+   * Returns the {@link PlugwerkMarketplace} facade, initializing the PF4J plugin manager and
+   * opening the marketplace connection on first call. If {@link #setPluginManager(PluginManager)}
+   * was already called (eager startup init), the existing manager is reused.
+   *
+   * <p>The marketplace is closed automatically by the JVM shutdown hook registered on first
+   * initialization.
    *
    * @return the marketplace facade connected to the configured Plugwerk server
    */
   public synchronized PlugwerkMarketplace getMarketplace() {
     if (marketplace == null) {
       if (pluginManager == null) {
-        pluginManager = PluginManagerFactory.create(pluginsDir, serverUrl, namespace, apiKey);
+        pluginManager = PluginManagerFactory.create(pluginsDir);
         registerShutdownHook();
       }
-      marketplace = PluginManagerFactory.getMarketplace(pluginManager);
+      marketplace = PluginManagerFactory.getMarketplace(pluginManager, buildConfig());
     }
     return marketplace;
+  }
+
+  private PlugwerkConfig buildConfig() {
+    PlugwerkConfig.Builder builder =
+        new PlugwerkConfig.Builder(serverUrl, namespace)
+            .pluginDirectory(pluginsDir.toAbsolutePath());
+    if (apiKey != null && !apiKey.isBlank()) {
+      builder.apiKey(apiKey);
+    }
+    return builder.build();
   }
 
   /**
@@ -148,6 +162,14 @@ public class PlugwerkCli implements Runnable {
         .addShutdownHook(
             new Thread(
                 () -> {
+                  if (marketplace != null) {
+                    log.debug("Closing Plugwerk marketplace");
+                    try {
+                      marketplace.close();
+                    } catch (Exception e) {
+                      log.debug("Suppressed exception during marketplace close", e);
+                    }
+                  }
                   if (pluginManager != null) {
                     log.debug("Stopping PF4J plugin manager");
                     try {

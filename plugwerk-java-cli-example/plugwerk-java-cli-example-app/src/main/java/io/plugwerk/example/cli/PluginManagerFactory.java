@@ -26,12 +26,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Creates and configures the PF4J {@link PluginManager} used by the CLI host.
+ * Creates the PF4J {@link PluginManager} and opens {@link PlugwerkMarketplace} connections used by
+ * the CLI host.
  *
  * <p>The {@code plugwerk-client-plugin} ZIP must be present in the plugins directory before calling
- * {@link #create(Path, String, String, String)}. The SDK plugin is loaded and started
- * automatically; its {@link PlugwerkMarketplace} instance is then available via {@link
- * #getMarketplace(PluginManager)}.
+ * {@link #create(Path)}. The SDK plugin is loaded and started automatically; a marketplace
+ * connection is then opened on demand via {@link #getMarketplace(PluginManager, PlugwerkConfig)}.
+ *
+ * <p>The returned {@link PlugwerkMarketplace} is owned by the caller and must be closed (it
+ * implements {@link AutoCloseable}). The CLI host registers a JVM shutdown hook to do so on exit.
  */
 public class PluginManagerFactory {
 
@@ -41,21 +44,16 @@ public class PluginManagerFactory {
   private PluginManagerFactory() {}
 
   /**
-   * Creates a {@link DefaultPluginManager}, configures the Plugwerk SDK plugin, and starts all
-   * plugins.
+   * Creates a {@link DefaultPluginManager} rooted at {@code pluginsDir} and starts all plugins.
    *
    * <p>{@link DefaultPluginManager} is used (not {@code JarPluginManager}) because it includes
    * {@code DefaultPluginRepository}, which automatically extracts ZIP files to directories before
    * loading. {@code JarPluginManager} only handles plain {@code .jar} files.
    *
    * @param pluginsDir directory containing the {@code plugwerk-client-plugin-*.zip}
-   * @param serverUrl Plugwerk server base URL (e.g. {@code http://localhost:8080})
-   * @param namespace namespace slug (e.g. {@code default})
-   * @param apiKey optional namespace-scoped API key (may be null or blank)
-   * @return started plugin manager ready for marketplace queries
+   * @return started plugin manager
    */
-  public static PluginManager create(
-      Path pluginsDir, String serverUrl, String namespace, String apiKey) {
+  public static PluginManager create(Path pluginsDir) {
     log.debug(
         "Starting PF4J plugin manager with plugins directory: {}", pluginsDir.toAbsolutePath());
 
@@ -69,38 +67,21 @@ public class PluginManagerFactory {
             .map(p -> p.getPluginId() + "@" + p.getDescriptor().getVersion())
             .toList());
 
-    // Configure the Plugwerk SDK plugin with server connection details.
-    // This must happen after startPlugins() and before getMarketplace().
-    PlugwerkConfig.Builder configBuilder =
-        new PlugwerkConfig.Builder(serverUrl, namespace)
-            .pluginDirectory(pluginsDir.toAbsolutePath());
-    if (apiKey != null && !apiKey.isBlank()) {
-      configBuilder.apiKey(apiKey);
-    }
-
-    PluginWrapper wrapper = manager.getPlugin(PLUGIN_ID);
-    if (wrapper == null) {
-      throw new IllegalStateException(
-          """
-                    Plugin '%s' not found.
-                    Make sure plugwerk-client-plugin-<version>.zip is present in the plugins directory.
-                    Run: cp <main-project>/plugwerk-client-plugin/build/pf4j/*.zip %s/
-                    """
-              .formatted(PLUGIN_ID, pluginsDir.toAbsolutePath()));
-    }
-    ((PlugwerkPlugin) wrapper.getPlugin()).configure(configBuilder.build());
-
     return manager;
   }
 
   /**
-   * Retrieves the {@link PlugwerkMarketplace} instance from the configured plugin.
+   * Opens a fresh {@link PlugwerkMarketplace} connection backed by {@code config}.
    *
-   * @param manager a started and configured {@link PluginManager}
-   * @return the {@link PlugwerkMarketplace} facade
-   * @throws IllegalStateException if {@code plugwerk-client-plugin} is not loaded or not configured
+   * <p>The returned marketplace is owned by the caller; close it (or use try-with-resources) to
+   * release the underlying HTTP client.
+   *
+   * @param manager a started {@link PluginManager} with the SDK plugin loaded
+   * @param config server URL, namespace, credentials, and plugin directory
+   * @return a new {@link PlugwerkMarketplace} connection
+   * @throws IllegalStateException if {@code plugwerk-client-plugin} is not loaded
    */
-  public static PlugwerkMarketplace getMarketplace(PluginManager manager) {
+  public static PlugwerkMarketplace getMarketplace(PluginManager manager, PlugwerkConfig config) {
     PluginWrapper wrapper = manager.getPlugin(PLUGIN_ID);
     if (wrapper == null) {
       throw new IllegalStateException(
@@ -110,6 +91,6 @@ public class PluginManagerFactory {
                     """
               .formatted(PLUGIN_ID));
     }
-    return ((PlugwerkPlugin) wrapper.getPlugin()).marketplace();
+    return ((PlugwerkPlugin) wrapper.getPlugin()).connect(config);
   }
 }
