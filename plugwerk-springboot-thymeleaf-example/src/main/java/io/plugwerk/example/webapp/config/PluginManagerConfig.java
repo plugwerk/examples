@@ -34,6 +34,11 @@ import org.springframework.context.annotation.Configuration;
  * <p>The {@code plugwerk-client-plugin} ZIP must be present in the plugins directory. If absent,
  * the application still starts but marketplace operations (catalog, install, update) will be
  * unavailable.
+ *
+ * <p>Bean wiring follows the JDBC-style {@link PlugwerkPlugin#connect(PlugwerkConfig)} factory: the
+ * {@link PluginManager} loads and starts plugins, the {@link PlugwerkConfig} bean carries the
+ * server connection details, and the {@link PlugwerkMarketplace} bean opens (and on shutdown
+ * closes) a single long-lived marketplace connection.
  */
 @Configuration
 public class PluginManagerConfig {
@@ -67,33 +72,35 @@ public class PluginManagerConfig {
             .map(p -> p.getPluginId() + "@" + p.getDescriptor().getVersion())
             .toList());
 
-    // Configure the Plugwerk SDK plugin with server connection details.
-    PluginWrapper wrapper = manager.getPlugin(PlugwerkPlugin.PLUGIN_ID);
-    if (wrapper != null) {
-      PlugwerkConfig.Builder configBuilder =
-          new PlugwerkConfig.Builder(serverUrl, namespace).pluginDirectory(pluginsPath);
-      if (apiKey != null && !apiKey.isBlank()) {
-        configBuilder.apiKey(apiKey);
-      }
-      ((PlugwerkPlugin) wrapper.getPlugin()).configure(configBuilder.build());
-      log.info("Plugwerk SDK plugin configured for {} (namespace: {})", serverUrl, namespace);
-    } else {
-      log.warn(
-          "Plugwerk SDK plugin not found in {}. "
-              + "Marketplace operations will be unavailable. "
-              + "Copy plugwerk-client-plugin-<version>.zip into the plugins directory.",
-          pluginsPath);
-    }
-
     return manager;
   }
 
   @Bean
-  public PlugwerkMarketplace plugwerkMarketplace(PluginManager pluginManager) {
+  public PlugwerkConfig plugwerkConfig() {
+    Path pluginsPath = Path.of(pluginsDir).toAbsolutePath();
+    PlugwerkConfig.Builder builder =
+        new PlugwerkConfig.Builder(serverUrl, namespace).pluginDirectory(pluginsPath);
+    if (apiKey != null && !apiKey.isBlank()) {
+      builder.apiKey(apiKey);
+    }
+    return builder.build();
+  }
+
+  @Bean(destroyMethod = "close")
+  public PlugwerkMarketplace plugwerkMarketplace(
+      PluginManager pluginManager, PlugwerkConfig plugwerkConfig) {
     PluginWrapper wrapper = pluginManager.getPlugin(PlugwerkPlugin.PLUGIN_ID);
     if (wrapper == null) {
+      log.warn(
+          "Plugwerk SDK plugin '{}' not found in plugins directory. "
+              + "Marketplace operations will be unavailable. "
+              + "Copy plugwerk-client-plugin-<version>.zip into the plugins directory.",
+          PlugwerkPlugin.PLUGIN_ID);
       return null;
     }
-    return ((PlugwerkPlugin) wrapper.getPlugin()).marketplace();
+    PlugwerkMarketplace marketplace =
+        ((PlugwerkPlugin) wrapper.getPlugin()).connect(plugwerkConfig);
+    log.info("Connected Plugwerk marketplace to {} (namespace: {})", serverUrl, namespace);
+    return marketplace;
   }
 }
