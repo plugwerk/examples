@@ -1,0 +1,248 @@
+name: Integration
+
+# End-to-end integration tests for both example projects (issue #12).
+# Each example boots the Plugwerk server via docker-compose, provisions a
+# public + private namespace, uploads its plugins, starts the example app
+# and exercises search / install / plugin invocation against the running
+# server. The auth contract for the private namespace is asserted explicitly.
+#
+# Build artefacts are produced once in the `build` job and consumed by the
+# two integration jobs in parallel.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build both examples once and publish the runtime artefacts (apps, plugin
+  # ZIPs, client SDK ZIP) so the two integration jobs can consume them without
+  # rebuilding.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build composite (both examples)
+        run: ./gradlew build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+      # CLI example artefacts ---------------------------------------------------
+      - name: Stage CLI runtime
+        run: |
+          set -euo pipefail
+          mkdir -p staged/cli/plugins staged/cli-plugins
+          cp plugwerk-java-cli-example/plugwerk-java-cli-example-app/build/libs/*-fat.jar staged/cli/
+          cp plugwerk-java-cli-example/plugins/plugwerk-client-plugin-*-pf4j.zip staged/cli/plugins/
+          cp plugwerk-java-cli-example/plugwerk-java-cli-example-hello-cmd-plugin/build/pf4j/*.zip   staged/cli-plugins/
+          cp plugwerk-java-cli-example/plugwerk-java-cli-example-sysinfo-cmd-plugin/build/pf4j/*.zip staged/cli-plugins/
+          ls -la staged/cli staged/cli/plugins staged/cli-plugins
+
+      - name: Upload CLI runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-runtime
+          path: staged/cli/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload CLI plugins
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-plugins
+          path: staged/cli-plugins/
+          retention-days: 7
+          if-no-files-found: error
+
+      # Spring Boot example artefacts ------------------------------------------
+      - name: Stage Spring Boot runtime
+        run: |
+          set -euo pipefail
+          mkdir -p staged/springboot/plugins staged/springboot-plugins
+          # Pick the bootJar (executable) — exclude the *-plain.jar produced by the Spring Boot plugin.
+          find plugwerk-springboot-thymeleaf-example/build/libs -maxdepth 1 -name '*.jar' \
+            ! -name '*-plain.jar' -exec cp {} staged/springboot/ \;
+          cp plugwerk-springboot-thymeleaf-example/plugins/plugwerk-client-plugin-*-pf4j.zip staged/springboot/plugins/
+          cp plugwerk-springboot-thymeleaf-example/plugwerk-example-plugin-sysinfo/build/pf4j/*.zip staged/springboot-plugins/
+          cp plugwerk-springboot-thymeleaf-example/plugwerk-example-plugin-env/build/pf4j/*.zip     staged/springboot-plugins/
+          ls -la staged/springboot staged/springboot/plugins staged/springboot-plugins
+
+      - name: Upload Spring Boot runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: springboot-runtime
+          path: staged/springboot/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload Spring Boot plugins
+        uses: actions/upload-artifact@v4
+        with:
+          name: springboot-plugins
+          path: staged/springboot-plugins/
+          retention-days: 7
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # CLI example: end-to-end happy path.
+  # ---------------------------------------------------------------------------
+  integration-cli:
+    name: Integration test - CLI example
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Download CLI runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-runtime
+          path: cli-runtime
+
+      - name: Download CLI plugins
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-plugins
+          path: cli-plugins
+
+      - name: Start Plugwerk server (docker-compose)
+        run: docker compose up -d
+
+      - name: Wait for server health
+        run: bash .github/scripts/wait-for-server.sh
+
+      - name: Provision namespaces and mint API keys
+        run: |
+          set -euo pipefail
+          JWT=$(bash .github/scripts/login-admin.sh)
+          PUBLIC_NS_KEY=$(bash  .github/scripts/provision-namespace.sh "$JWT" public-ns  true  true)
+          PRIVATE_NS_KEY=$(bash .github/scripts/provision-namespace.sh "$JWT" private-ns false true)
+          {
+            echo "PLUGWERK_BOOTSTRAP_JWT=$JWT"
+            echo "PUBLIC_NS_KEY=$PUBLIC_NS_KEY"
+            echo "PRIVATE_NS_KEY=$PRIVATE_NS_KEY"
+          } >>"$GITHUB_ENV"
+
+      - name: Run CLI integration test
+        run: bash .github/scripts/run-cli-it.sh
+        env:
+          CLI_RUNTIME_DIR: ${{ github.workspace }}/cli-runtime
+          CLI_PLUGINS_DIR: ${{ github.workspace }}/cli-plugins
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: bash .github/scripts/dump-logs.sh ci-logs/cli
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-cli-logs
+          path: ci-logs/cli/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Stop Plugwerk server
+        if: always()
+        run: docker compose down -v
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot + Thymeleaf example: end-to-end happy path.
+  # ---------------------------------------------------------------------------
+  integration-springboot:
+    name: Integration test - Spring Boot example
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Download Spring Boot runtime
+        uses: actions/download-artifact@v4
+        with:
+          name: springboot-runtime
+          path: springboot-runtime
+
+      - name: Download Spring Boot plugins
+        uses: actions/download-artifact@v4
+        with:
+          name: springboot-plugins
+          path: springboot-plugins
+
+      - name: Start Plugwerk server (docker-compose)
+        run: docker compose up -d
+
+      - name: Wait for server health
+        run: bash .github/scripts/wait-for-server.sh
+
+      - name: Provision namespaces and mint API keys
+        run: |
+          set -euo pipefail
+          JWT=$(bash .github/scripts/login-admin.sh)
+          PUBLIC_NS_KEY=$(bash  .github/scripts/provision-namespace.sh "$JWT" public-ns  true  true)
+          PRIVATE_NS_KEY=$(bash .github/scripts/provision-namespace.sh "$JWT" private-ns false true)
+          {
+            echo "PLUGWERK_BOOTSTRAP_JWT=$JWT"
+            echo "PUBLIC_NS_KEY=$PUBLIC_NS_KEY"
+            echo "PRIVATE_NS_KEY=$PRIVATE_NS_KEY"
+          } >>"$GITHUB_ENV"
+
+      - name: Run Spring Boot integration test
+        run: bash .github/scripts/run-springboot-it.sh
+        env:
+          SPRINGBOOT_RUNTIME_DIR: ${{ github.workspace }}/springboot-runtime
+          SPRINGBOOT_PLUGINS_DIR: ${{ github.workspace }}/springboot-plugins
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: bash .github/scripts/dump-logs.sh ci-logs/springboot
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-springboot-logs
+          path: ci-logs/springboot/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Stop Plugwerk server
+        if: always()
+        run: docker compose down -v

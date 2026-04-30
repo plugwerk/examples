@@ -7,8 +7,11 @@ services:
       PLUGWERK_DB_URL: jdbc:postgresql://postgres:5432/plugwerk
       PLUGWERK_DB_USERNAME: plugwerk
       PLUGWERK_DB_PASSWORD: plugwerk
-      PLUGWERK_JWT_SECRET: "dev-only-secret-min-32-characters!!"
-      PLUGWERK_ENCRYPTION_KEY: "dev-encrypt-16ch"
+      # Server snapshot ≥ 2026-04-30 reads these under plugwerk.auth.*, so the
+      # env-var names carry the AUTH_ prefix. Older builds used PLUGWERK_JWT_SECRET
+      # and PLUGWERK_ENCRYPTION_KEY without it.
+      PLUGWERK_AUTH_JWT_SECRET: "dev-only-secret-min-32-characters!!"
+      PLUGWERK_AUTH_ENCRYPTION_KEY: "dev-encrypt-16ch"
       PLUGWERK_AUTH_ADMIN_PASSWORD: admin
     volumes:
       - plugwerk-artifacts:/var/plugwerk/artifacts
