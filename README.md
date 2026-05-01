@@ -32,7 +32,41 @@ The container image `ghcr.io/plugwerk/plugwerk-server:snapshot` is **publicly pu
 > Health check: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`.
 > The server has no web frontend under `/`; use the REST API under `/api/v1/...` or OpenAPI under `/v3/api-docs` (auth required).
 
-### 2. Build both examples (composite build)
+### 2. Bootstrap a namespace and an API key
+
+A fresh server has no namespaces, so the very first run needs to create one. Read-only catalog access works anonymously on namespaces with `publicCatalog=true`; uploads, approvals and access-key management always require an admin JWT.
+
+The Spring example installs and uninstalls plugins through its own controllers, so it expects an `X-Api-Key` even against a public namespace — the snippet below mints one for both examples to share.
+
+Requires [`jq`](https://stedolan.github.io/jq/) (Homebrew: `brew install jq`).
+
+```bash
+# 1. Log in as the bootstrap admin and capture a JWT (one-shot, used only for setup)
+JWT=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin"}' | jq -r .accessToken)
+
+# 2. Create the `default` namespace as a public catalog (idempotent: HTTP 409 means it already exists).
+#    publicCatalog=true lets `list` / `search` / download work without an API key;
+#    set it to false here if you'd rather force key-auth from the start.
+curl -sS -o /dev/null -X POST http://localhost:8080/api/v1/namespaces \
+  -H "Authorization: Bearer $JWT" \
+  -H 'Content-Type: application/json' \
+  -d '{"slug":"default","name":"Default","publicCatalog":true,"autoApproveReleases":true}' \
+  || true
+
+# 3. Mint a fresh access key — the plain-text value is shown only once
+export PLUGWERK_API_KEY=$(curl -s -X POST http://localhost:8080/api/v1/namespaces/default/access-keys \
+  -H "Authorization: Bearer $JWT" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"local-dev","expiresAt":null}' | jq -r .key)
+
+echo "$PLUGWERK_API_KEY"   # pwk_…
+```
+
+Both examples honour the `PLUGWERK_API_KEY` environment variable; the CLI also accepts an inline `--api-key=…` flag. See the per-example README for invocation details.
+
+### 3. Build both examples (composite build)
 
 From the repository root:
 
@@ -48,7 +82,7 @@ Per-example tasks remain reachable via path, e.g.:
 ./gradlew :plugwerk-springboot-thymeleaf-example:bootRun
 ```
 
-### 3. Build a single example
+### 4. Build a single example
 
 Each example is also a fully standalone Gradle build:
 
