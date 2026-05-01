@@ -123,62 +123,39 @@ runs. Only re-copy if you update the SDK version (and delete the extracted direc
 
 ## Authentication
 
-Authentication depends on the namespace's visibility setting:
+Read-only operations against a `publicCatalog = true` namespace work without
+an API key — `list`, `search`, and the download underpinning `install` all
+go through anonymously. Other operations (`uninstall`, write/admin endpoints)
+and any access against a `publicCatalog = false` namespace require the
+namespace API key, which the CLI sends as the `X-Api-Key` header. Without it,
+those calls return HTTP 401.
 
-### Public namespaces (no API key required for read operations)
+### Get an API key
 
-If the namespace has **public catalog** enabled (`publicCatalog = true`), read-only
-operations (list, search, download) work without authentication:
+See **[`Quick start › Bootstrap a namespace and an API key`](../README.md#2-bootstrap-a-namespace-and-an-api-key)**
+in the repository-root README for the full one-shot flow (login → create
+`default` namespace → mint key). At the end of that flow you have an exported
+`PLUGWERK_API_KEY` in your shell.
 
-```bash
-# No --api-key needed for listing plugins in a public namespace
-java -jar *-fat.jar --server=http://localhost:8080 list
-```
-
-> The `default` namespace is public by default (created by the initial migration).
-
-Write operations (upload, approve, delete) **always** require an API key,
-even on public namespaces.
-
-### Private namespaces (API key required for all operations)
-
-For namespaces with `publicCatalog = false`, **all** operations require a
-namespace-scoped API key. See [ADR-0011](../../docs/adrs/0011-client-auth-api-key-strategy.md).
-
-### Generating an API key
-
-Generate a key via the Plugwerk Web UI (Admin → Namespaces → select namespace →
-API Keys → Generate Key) or via the API:
-
-```bash
-# Log in to get a JWT (one-time, for key generation only)
-TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"<your-admin-password>"}' | jq -r .accessToken)
-
-# Generate a namespace-scoped API key
-API_KEY=$(curl -s -X POST http://localhost:8080/api/v1/namespaces/default/access-keys \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"CLI example"}' | jq -r .key)
-
-echo $API_KEY   # pwk_...
-```
-
-> **Important:** The plain-text key is shown only once. Store it securely.
+> The root-README snippet creates `default` with `publicCatalog = true`, so
+> `list`/`search`/`install` work even without `--api-key`. Setting it does no
+> harm. See
+> [ADR-0011](https://github.com/plugwerk/plugwerk/blob/main/docs/adrs/0011-client-auth-api-key-strategy.md)
+> for the full auth model.
 
 ### Passing the API key to the CLI
 
 ```bash
 # Option A: inline flag
-java -jar *-fat.jar --server=http://localhost:8080 --api-key=$API_KEY list
+java -jar *-fat.jar --server=http://localhost:8080 --api-key=$PLUGWERK_API_KEY list
 
-# Option B: environment variable (persists in the shell session)
-export PLUGWERK_API_KEY=$API_KEY
+# Option B: environment variable (picked up automatically)
+export PLUGWERK_API_KEY=...        # already exported by the root-README snippet
 java -jar *-fat.jar --server=http://localhost:8080 list
 
-# Option C: no key (works for read operations on public namespaces)
-java -jar *-fat.jar --server=http://localhost:8080 list
+# Option C: from the Gradle source checkout (no fat JAR build required)
+./gradlew :plugwerk-java-cli-example-app:run \
+  --args="--plugins-dir=$PWD/plugins --api-key=$PLUGWERK_API_KEY list"
 ```
 
 ---

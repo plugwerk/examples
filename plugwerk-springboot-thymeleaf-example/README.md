@@ -82,10 +82,20 @@ cp plugwerk-client-plugin/build/pf4j/plugwerk-client-plugin-*.zip \
 
 ### 3. Start the example application
 
+The Spring host installs and uninstalls plugins through the Plugwerk server, so
+it expects a namespace-scoped API key. Mint one once with the snippet in
+**[`Quick start › Bootstrap a namespace and an API key`](../README.md#2-bootstrap-a-namespace-and-an-api-key)**
+in the repository-root README — it exports `PLUGWERK_API_KEY` in your shell.
+
 ```bash
 cd examples/plugwerk-springboot-thymeleaf-example/
-./gradlew bootRun
+PLUGWERK_API_KEY=$PLUGWERK_API_KEY ./gradlew bootRun
 ```
+
+> If the configured namespace has `publicCatalog = true`, anonymous read-only
+> traffic (`/plugins/available` listing) still works without `PLUGWERK_API_KEY`,
+> but install/uninstall actions exposed by this example need the key to authenticate
+> against the server's write endpoints.
 
 Open `http://localhost:8081` in your browser.
 
