@@ -188,8 +188,14 @@ echo "[run-springboot-it] OK: /page/sysinfo renders the plugin contribution"
 # ---------------------------------------------------------------------------
 
 echo
-echo "=== 5. Auth contract: private-ns ==="
+echo "=== 5. Auth contract: public-ns vs private-ns ==="
 
+# public-ns (publicCatalog=true): anonymous read allowed, key still works.
+bash "${SCRIPT_DIR}/assert-http.sh" 200 "${PLUGWERK_BASE_URL}/api/v1/namespaces/public-ns/plugins"
+bash "${SCRIPT_DIR}/assert-http.sh" 200 "${PLUGWERK_BASE_URL}/api/v1/namespaces/public-ns/plugins" \
+  -H "X-Api-Key: ${PUBLIC_NS_KEY}"
+
+# private-ns (publicCatalog=false): anonymous denied, key required.
 bash "${SCRIPT_DIR}/assert-http.sh" 401 "${PLUGWERK_BASE_URL}/api/v1/namespaces/private-ns/plugins"
 bash "${SCRIPT_DIR}/assert-http.sh" 200 "${PLUGWERK_BASE_URL}/api/v1/namespaces/private-ns/plugins" \
   -H "X-Api-Key: ${PRIVATE_NS_KEY}"
