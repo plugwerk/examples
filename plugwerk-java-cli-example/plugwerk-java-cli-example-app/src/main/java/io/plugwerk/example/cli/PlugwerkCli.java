@@ -61,29 +61,33 @@ public class PlugwerkCli implements Runnable {
 
   private static final Logger log = LoggerFactory.getLogger(PlugwerkCli.class);
 
+  // Picocli's ${VAR} syntax resolves system properties; the ${env:VAR} prefix
+  // is required to read environment variables. The plain `${VAR:-default}`
+  // form previously used here silently fell through to the literal default
+  // because no PLUGWERK_* system property is ever set.
   @Option(
       names = {"--server", "-s"},
       description =
           "Plugwerk server base URL (env: PLUGWERK_SERVER_URL, default: ${DEFAULT-VALUE})",
-      defaultValue = "${PLUGWERK_SERVER_URL:-http://localhost:8080}")
+      defaultValue = "${env:PLUGWERK_SERVER_URL:-http://localhost:8080}")
   public String serverUrl;
 
   @Option(
       names = {"--namespace", "-n"},
       description = "Namespace slug (env: PLUGWERK_NAMESPACE, default: ${DEFAULT-VALUE})",
-      defaultValue = "${PLUGWERK_NAMESPACE:-default}")
+      defaultValue = "${env:PLUGWERK_NAMESPACE:-default}")
   public String namespace;
 
   @Option(
       names = {"--plugins-dir"},
       description = "PF4J plugins directory (env: PLUGWERK_PLUGINS_DIR, default: ${DEFAULT-VALUE})",
-      defaultValue = "${PLUGWERK_PLUGINS_DIR:-./plugins}")
+      defaultValue = "${env:PLUGWERK_PLUGINS_DIR:-./plugins}")
   public Path pluginsDir;
 
   @Option(
       names = {"--api-key", "-k"},
       description = "Namespace-scoped API key for authentication (env: PLUGWERK_API_KEY)",
-      defaultValue = "${PLUGWERK_API_KEY:}")
+      defaultValue = "${env:PLUGWERK_API_KEY:-}")
   public String apiKey;
 
   // Lazily initialized on first subcommand invocation
