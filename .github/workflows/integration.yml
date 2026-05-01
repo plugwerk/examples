@@ -125,13 +125,13 @@ jobs:
           java-version: 21
 
       - name: Download CLI runtime
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: cli-runtime
           path: cli-runtime
 
       - name: Download CLI plugins
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: cli-plugins
           path: cli-plugins
@@ -195,13 +195,13 @@ jobs:
           java-version: 21
 
       - name: Download Spring Boot runtime
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: springboot-runtime
           path: springboot-runtime
 
       - name: Download Spring Boot plugins
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: springboot-plugins
           path: springboot-plugins
