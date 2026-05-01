@@ -1,7 +1,7 @@
 // Shared conventions for all modules of the CLI example.
 
 plugins {
-    id("com.diffplug.spotless") version "7.1.0" apply false
+    id("com.diffplug.spotless") version "7.2.1" apply false
 }
 
 val lifecycleTasks = listOf("build", "clean", "assemble", "check")
