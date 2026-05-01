@@ -2,10 +2,8 @@
 plugwerk         = "1.0.0-SNAPSHOT"
 pf4j             = "3.15.0"
 slf4j            = "2.0.17"
-# Aligned with the version Spring Boot 4.0 ships transitively in logback-core
-# (1.5.32) — pinning to an older logback-classic alongside it triggers
-# NoSuchMethodError: LoggerContext.initCollisionMaps() at startup.
-logback          = "1.5.32"
+# logback is intentionally NOT pinned here — Spring Boot's BOM owns the version
+# so logback-classic and logback-core stay in lockstep across Boot upgrades.
 spring-boot      = "4.0.4"
 thymeleaf-layout = "4.0.1"
 
@@ -16,6 +14,7 @@ plugwerk-client-plugin    = { module = "io.plugwerk:plugwerk-client-plugin",    
 pf4j                      = { module = "org.pf4j:pf4j",                                        version.ref = "pf4j" }
 
 slf4j-api                 = { module = "org.slf4j:slf4j-api",                                   version.ref = "slf4j" }
-logback-classic            = { module = "ch.qos.logback:logback-classic",                        version.ref = "logback" }
+# No version: Spring Boot's BOM (via io.spring.dependency-management) supplies it.
+logback-classic           = { module = "ch.qos.logback:logback-classic" }
 
 thymeleaf-layout-dialect  = { module = "nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect",      version.ref = "thymeleaf-layout" }
