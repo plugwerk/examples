@@ -63,8 +63,11 @@ public class Main {
     // Eagerly initialize the plugin manager so that already-installed plugins are
     // loaded and their CliCommand extensions are registered as picocli subcommands
     // before execute() tries to match the user's subcommand name.
-    // parseArgs() may have failed before applying picocli defaults, so fall back to
-    // env vars / hardcoded defaults for the plugins directory if it is still null.
+    // The first parseArgs() above may have thrown before applying picocli defaults
+    // (e.g. when the user invokes a plugin-contributed subcommand that hasn't been
+    // registered yet). In that case cli.pluginsDir is still null even though
+    // PlugwerkCli's @Option uses ${env:PLUGWERK_PLUGINS_DIR:-./plugins}, so we
+    // mirror the same env-or-default lookup manually here.
     Path pluginsDir =
         cli.pluginsDir != null
             ? cli.pluginsDir

@@ -70,29 +70,19 @@ rm -rf "${CLI_WORK}"
 mkdir -p "${CLI_WORK}/plugins"
 cp "${CLI_RUNTIME_DIR}/plugins/"plugwerk-client-plugin-*-pf4j.zip "${CLI_WORK}/plugins/"
 
-# Picocli's `${PLUGWERK_*:}` default-value syntax does NOT read environment
-# variables in the current CLI build, so we pass server / namespace / api-key
-# explicitly via flags. --plugins-dir is also passed explicitly because the
-# fat JAR resolves the default path relative to its CWD, not the project root.
-CURRENT_NAMESPACE=""
-CURRENT_API_KEY=""
+# PLUGWERK_PLUGINS_DIR is invariant across all invocations. PLUGWERK_NAMESPACE
+# and PLUGWERK_API_KEY are exported per phase below; the run_cli helper just
+# inherits whatever is currently in the environment.
+export PLUGWERK_PLUGINS_DIR="${CLI_WORK}/plugins"
 
 run_cli() {
   local label="$1"; shift
   local log="cli-stdout.log"
   echo
   echo "--- CLI [${label}]: $* ---"
-  local -a auth_flags=()
-  if [[ -n "${CURRENT_NAMESPACE}" ]]; then
-    auth_flags+=("--namespace=${CURRENT_NAMESPACE}")
-  fi
-  if [[ -n "${CURRENT_API_KEY}" ]]; then
-    auth_flags+=("--api-key=${CURRENT_API_KEY}")
-  fi
   (
     cd "${CLI_WORK}"
-    java -jar "${FAT_JAR}" --plugins-dir="${CLI_WORK}/plugins" \
-      ${auth_flags[@]+"${auth_flags[@]}"} "$@"
+    java -jar "${FAT_JAR}" "$@"
   ) 2>&1 | tee -a "${log}"
   return "${PIPESTATUS[0]}"
 }
@@ -108,8 +98,8 @@ echo "=== 3. public-ns flow (anonymous catalog read, key for install) ==="
 # which we intentionally keep key-authenticated, matching the documented
 # day-to-day workflow.
 
-CURRENT_NAMESPACE=public-ns
-CURRENT_API_KEY=""
+export PLUGWERK_NAMESPACE=public-ns
+unset PLUGWERK_API_KEY
 
 run_cli "list public-ns (anon)" list >"public-list.out" 2>&1 || true
 grep -q 'io.plugwerk.example.cli.hello' "public-list.out" || {
@@ -118,13 +108,13 @@ grep -q 'io.plugwerk.example.cli.hello' "public-list.out" || {
   exit 1
 }
 
-CURRENT_API_KEY="${PUBLIC_NS_KEY}"
+export PLUGWERK_API_KEY="${PUBLIC_NS_KEY}"
 run_cli "install hello" install io.plugwerk.example.cli.hello "${HELLO_VERSION}"
 
 # Subsequent invocations need no namespace/key — the locally extracted plugin
 # is loaded by PF4J and the subcommand runs in-process.
-CURRENT_NAMESPACE=""
-CURRENT_API_KEY=""
+unset PLUGWERK_NAMESPACE
+unset PLUGWERK_API_KEY
 run_cli "invoke hello" hello >"hello.out" 2>&1
 grep -q 'Hello, World!' "hello.out" || {
   echo "[run-cli-it] FAIL: hello subcommand did not produce expected greeting" >&2
@@ -141,8 +131,8 @@ echo "[run-cli-it] OK: public-ns -> hello -> 'Hello, World!'"
 echo
 echo "=== 4. private-ns flow (X-Api-Key required) ==="
 
-CURRENT_NAMESPACE=private-ns
-CURRENT_API_KEY="${PRIVATE_NS_KEY}"
+export PLUGWERK_NAMESPACE=private-ns
+export PLUGWERK_API_KEY="${PRIVATE_NS_KEY}"
 
 run_cli "list private-ns" list >"private-list.out" 2>&1 || true
 grep -q 'io.plugwerk.example.cli.sysinfo' "private-list.out" || {
@@ -153,8 +143,8 @@ grep -q 'io.plugwerk.example.cli.sysinfo' "private-list.out" || {
 
 run_cli "install sysinfo" install io.plugwerk.example.cli.sysinfo "${SYSINFO_VERSION}"
 
-CURRENT_NAMESPACE=""
-CURRENT_API_KEY=""
+unset PLUGWERK_NAMESPACE
+unset PLUGWERK_API_KEY
 run_cli "invoke sysinfo" sysinfo >"sysinfo.out" 2>&1
 for needle in 'Java:' 'OS:' 'Heap:'; do
   grep -q "${needle}" "sysinfo.out" || {
