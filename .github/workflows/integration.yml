@@ -63,7 +63,7 @@ jobs:
           ls -la staged/cli staged/cli/plugins staged/cli-plugins
 
       - name: Upload CLI runtime
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cli-runtime
           path: staged/cli/
@@ -71,7 +71,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload CLI plugins
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cli-plugins
           path: staged/cli-plugins/
@@ -92,7 +92,7 @@ jobs:
           ls -la staged/springboot staged/springboot/plugins staged/springboot-plugins
 
       - name: Upload Spring Boot runtime
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: springboot-runtime
           path: staged/springboot/
@@ -100,7 +100,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Spring Boot plugins
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: springboot-plugins
           path: staged/springboot-plugins/
@@ -166,7 +166,7 @@ jobs:
 
       - name: Upload diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-cli-logs
           path: ci-logs/cli/
@@ -236,7 +236,7 @@ jobs:
 
       - name: Upload diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-springboot-logs
           path: ci-logs/springboot/
