@@ -102,22 +102,23 @@ run_cli() {
 # ---------------------------------------------------------------------------
 
 echo
-echo "=== 3. public-ns flow ==="
-# Note: the current Plugwerk server snapshot enforces auth on every namespace
-# endpoint regardless of publicCatalog (tracked separately upstream). The CLI
-# always sends X-Api-Key, so the assertion we care about — "the catalog
-# round-trip works through the host" — is unaffected.
+echo "=== 3. public-ns flow (anonymous catalog read, key for install) ==="
+# `list` runs anonymously to prove publicCatalog=true is honored end-to-end
+# through the CLI — no X-Api-Key header is sent. `install` triggers a download
+# which we intentionally keep key-authenticated, matching the documented
+# day-to-day workflow.
 
 CURRENT_NAMESPACE=public-ns
-CURRENT_API_KEY="${PUBLIC_NS_KEY}"
+CURRENT_API_KEY=""
 
-run_cli "list public-ns" list >"public-list.out" 2>&1 || true
+run_cli "list public-ns (anon)" list >"public-list.out" 2>&1 || true
 grep -q 'io.plugwerk.example.cli.hello' "public-list.out" || {
-  echo "[run-cli-it] FAIL: hello plugin not in public-ns list" >&2
+  echo "[run-cli-it] FAIL: hello plugin not in anonymous public-ns list" >&2
   cat "public-list.out" >&2
   exit 1
 }
 
+CURRENT_API_KEY="${PUBLIC_NS_KEY}"
 run_cli "install hello" install io.plugwerk.example.cli.hello "${HELLO_VERSION}"
 
 # Subsequent invocations need no namespace/key — the locally extracted plugin
@@ -169,8 +170,14 @@ echo "[run-cli-it] OK: private-ns -> sysinfo -> Java/OS/Heap"
 # ---------------------------------------------------------------------------
 
 echo
-echo "=== 5. Auth contract: private-ns ==="
+echo "=== 5. Auth contract: public-ns vs private-ns ==="
 
+# public-ns (publicCatalog=true): anonymous read allowed, key still works.
+bash "${SCRIPT_DIR}/assert-http.sh" 200 "${BASE_URL}/api/v1/namespaces/public-ns/plugins"
+bash "${SCRIPT_DIR}/assert-http.sh" 200 "${BASE_URL}/api/v1/namespaces/public-ns/plugins" \
+  -H "X-Api-Key: ${PUBLIC_NS_KEY}"
+
+# private-ns (publicCatalog=false): anonymous denied, key required.
 bash "${SCRIPT_DIR}/assert-http.sh" 401 "${BASE_URL}/api/v1/namespaces/private-ns/plugins"
 bash "${SCRIPT_DIR}/assert-http.sh" 200 "${BASE_URL}/api/v1/namespaces/private-ns/plugins" \
   -H "X-Api-Key: ${PRIVATE_NS_KEY}"
