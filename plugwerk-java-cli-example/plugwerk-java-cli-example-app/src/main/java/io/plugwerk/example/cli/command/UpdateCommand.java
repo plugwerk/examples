@@ -15,6 +15,7 @@
  */
 package io.plugwerk.example.cli.command;
 
+import io.plugwerk.example.cli.DynamicCommandLoader;
 import io.plugwerk.example.cli.PlugwerkCli;
 import io.plugwerk.spi.extension.PlugwerkMarketplace;
 import io.plugwerk.spi.model.UpdateInfo;
@@ -103,6 +104,10 @@ public class UpdateCommand implements Runnable {
                 counts[1]++;
               });
     }
+    // Each successful install is already live in PF4J; refresh the picocli
+    // command tree so any subcommand changes from upgraded plugins are visible.
+    DynamicCommandLoader.reload(parent.getCommandLine(), parent.getPluginManager());
+
     System.out.printf("%nDone: %d updated, %d failed.%n", counts[0], counts[1]);
     if (counts[1] > 0) {
       System.exit(1);
