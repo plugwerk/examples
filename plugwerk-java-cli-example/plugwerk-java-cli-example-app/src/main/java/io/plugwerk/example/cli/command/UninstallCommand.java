@@ -16,8 +16,6 @@
 package io.plugwerk.example.cli.command;
 
 import io.plugwerk.example.cli.PlugwerkCli;
-import org.pf4j.PluginManager;
-import org.pf4j.PluginState;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
@@ -46,16 +44,8 @@ public class UninstallCommand implements Runnable {
   public void run() {
     System.out.printf("Uninstalling %s …%n", pluginId);
 
-    // Stop and unload the plugin from the running PF4J plugin manager before
-    // deleting the files, so the classloader releases any file handles.
-    PluginManager pm = parent.getPluginManager();
-    if (pm != null && pm.getPlugin(pluginId) != null) {
-      if (pm.getPlugin(pluginId).getPluginState() == PluginState.STARTED) {
-        pm.stopPlugin(pluginId);
-      }
-      pm.unloadPlugin(pluginId);
-    }
-
+    // The installer SPI stops, unloads and deletes the plugin in one call —
+    // the host no longer needs to drive the PF4J lifecycle by hand.
     parent
         .getMarketplace()
         .installer()
