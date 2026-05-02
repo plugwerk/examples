@@ -55,10 +55,16 @@ Built-in subcommands:
 | `update`    | Check for or apply available updates |
 
 Plugins that implement `CliCommand` are loaded as PF4J extensions and registered
-as additional picocli subcommands at startup. After `install`, newly contributed
-commands are available immediately in the same process. After `uninstall`, the
-plugin is stopped and unloaded — and its extracted directory is removed — so it
-is gone on the next invocation.
+as additional picocli subcommands at startup. The Plugwerk SDK installer drives
+the PF4J lifecycle end-to-end:
+
+- `install(pluginId, version)` downloads the artifact, verifies its SHA-256,
+  loads it into PF4J and starts it. After it returns the plugin is **live** in
+  the running process; the host only refreshes its picocli command tree so any
+  new `CliCommand` subcommands appear immediately.
+- `uninstall(pluginId)` stops and unloads the plugin in PF4J, then deletes the
+  artifact file in one call — no manual `stopPlugin` / `unloadPlugin` from the
+  host is required or correct.
 
 ### plugwerk-java-cli-example-hello-cmd-plugin / plugwerk-java-cli-example-sysinfo-cmd-plugin
 
@@ -328,7 +334,7 @@ java -jar $JAR sysinfo
 
 java -jar $JAR sysinfo --all     # includes all system properties
 
-# Uninstall a plugin (stops + unloads it, removes ZIP and extracted directory)
+# Uninstall a plugin (the SDK stops + unloads it and deletes the artifact in one call)
 java -jar $JAR uninstall io.plugwerk.example.cli.hello
 ```
 

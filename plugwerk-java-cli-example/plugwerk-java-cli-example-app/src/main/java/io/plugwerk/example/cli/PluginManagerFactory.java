@@ -91,6 +91,6 @@ public class PluginManagerFactory {
                     """
               .formatted(PLUGIN_ID));
     }
-    return ((PlugwerkPlugin) wrapper.getPlugin()).connect(config);
+    return ((PlugwerkPlugin) wrapper.getPlugin()).connect(config, manager);
   }
 }

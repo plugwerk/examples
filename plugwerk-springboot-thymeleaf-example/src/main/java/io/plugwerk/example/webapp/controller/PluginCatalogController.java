@@ -99,9 +99,8 @@ public class PluginCatalogController {
     try {
       InstallResult result = marketplace.installer().install(pluginId, version);
       if (result instanceof InstallResult.Success s) {
-        // Load and start the newly downloaded plugin so PF4J recognises it
-        pluginManager.loadPlugins();
-        pluginManager.startPlugins();
+        // The installer SPI loads and starts the plugin in PF4J on success;
+        // the host only needs to refresh its own contribution registry.
         registry.refresh();
         redirectAttributes.addFlashAttribute(
             "successMessage", "Successfully installed " + s.getPluginId() + "@" + s.getVersion());

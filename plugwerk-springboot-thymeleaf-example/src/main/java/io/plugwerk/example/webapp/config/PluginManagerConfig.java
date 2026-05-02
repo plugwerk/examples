@@ -99,7 +99,7 @@ public class PluginManagerConfig {
       return null;
     }
     PlugwerkMarketplace marketplace =
-        ((PlugwerkPlugin) wrapper.getPlugin()).connect(plugwerkConfig);
+        ((PlugwerkPlugin) wrapper.getPlugin()).connect(plugwerkConfig, pluginManager);
     log.info("Connected Plugwerk marketplace to {} (namespace: {})", serverUrl, namespace);
     return marketplace;
   }

@@ -100,10 +100,7 @@ public class PluginInstalledController {
     }
 
     try {
-      // Stop and unload the plugin from PF4J before removing the file
-      pluginManager.stopPlugin(pluginId);
-      pluginManager.unloadPlugin(pluginId);
-
+      // The installer SPI stops, unloads and deletes the plugin in one call.
       marketplace
           .installer()
           .uninstall(pluginId)
@@ -137,15 +134,15 @@ public class PluginInstalledController {
     }
 
     try {
-      // Uninstall the current version, then install the new one
+      // Uninstall the current version, then install the new one. Both SPI calls
+      // perform the full PF4J lifecycle (stop+unload+delete and download+load+start);
+      // the host only refreshes its own contribution registry afterwards.
       marketplace.installer().uninstall(pluginId);
       marketplace
           .installer()
           .install(pluginId, version)
           .onSuccess(
               s -> {
-                pluginManager.loadPlugins();
-                pluginManager.startPlugins();
                 registry.refresh();
                 redirectAttributes.addFlashAttribute(
                     "successMessage",
