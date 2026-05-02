@@ -31,10 +31,24 @@ public interface PageContribution extends ExtensionPoint {
 ### Host Application
 
 The Spring Boot host application:
-- Manages PF4J plugin lifecycle (load, start, stop, uninstall)
+- Bootstraps PF4J at startup (initial `loadPlugins` + `startPlugins`) and stops
+  the plugin manager on JVM shutdown
 - Configures the Plugwerk SDK plugin for server communication
 - Discovers `PageContribution` extensions and renders them via Thymeleaf
-- Provides plugin catalog, install, uninstall, and update pages
+- Provides plugin catalog, install, uninstall, and update pages — each delegates
+  to the Plugwerk SDK for the per-plugin lifecycle
+
+### Plugin lifecycle semantics
+
+The Plugwerk SDK installer owns the per-plugin PF4J lifecycle:
+
+- `installer.install(pluginId, version)` returns with the plugin **live** in
+  PF4J (download → SHA-256 verify → load → start, with rollback on failure).
+  The controller only calls `registry.refresh()` afterwards to update its own
+  `PageContribution` cache.
+- `installer.uninstall(pluginId)` stops and unloads the plugin in PF4J and
+  deletes the artifact file in one call. No host-side `stopPlugin` /
+  `unloadPlugin` is required.
 
 ### Example Plugins
 
