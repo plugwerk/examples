@@ -58,6 +58,14 @@ allprojects {
             }
         }
     }
+
+    // While the SDK is on SNAPSHOTs, always re-resolve changing modules so CI
+    // and local builds pick up upstream fixes within minutes instead of waiting
+    // for Gradle's 24h default cache. Drop this once the examples pin to a
+    // stable plugwerk release.
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+    }
 }
 
 subprojects {
