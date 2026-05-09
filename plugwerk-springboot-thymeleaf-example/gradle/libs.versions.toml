@@ -4,7 +4,9 @@ pf4j             = "3.15.0"
 slf4j            = "2.0.17"
 # logback is intentionally NOT pinned here — Spring Boot's BOM owns the version
 # so logback-classic and logback-core stay in lockstep across Boot upgrades.
-spring-boot      = "4.0.4"
+spring-boot      = "4.0.6"
+spring-dep-mgmt  = "1.1.7"
+spotless         = "8.4.0"
 thymeleaf-layout = "4.0.1"
 
 [libraries]
@@ -18,3 +20,8 @@ slf4j-api                 = { module = "org.slf4j:slf4j-api",                   
 logback-classic           = { module = "ch.qos.logback:logback-classic" }
 
 thymeleaf-layout-dialect  = { module = "nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect",      version.ref = "thymeleaf-layout" }
+
+[plugins]
+spring-boot                  = { id = "org.springframework.boot",        version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dep-mgmt" }
+spotless                     = { id = "com.diffplug.spotless",           version.ref = "spotless" }
