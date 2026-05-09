@@ -5,6 +5,7 @@ picocli    = "4.7.7"
 slf4j      = "2.0.17"
 logback    = "1.5.32"
 junit      = "6.0.3"
+spotless   = "8.4.0"
 
 [libraries]
 plugwerk-spi            = { module = "io.plugwerk:plugwerk-spi",              version.ref = "plugwerk" }
@@ -19,3 +20,6 @@ logback-classic     = { module = "ch.qos.logback:logback-classic",        versio
 
 junit-jupiter       = { module = "org.junit.jupiter:junit-jupiter",       version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
