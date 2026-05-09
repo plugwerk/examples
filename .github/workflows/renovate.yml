@@ -1,0 +1,40 @@
+# Self-hosted Renovate trigger for this repo.
+#
+# Defines the schedule and permissions, then delegates the actual
+# Renovate run to the org-wide reusable workflow at
+# plugwerk/.github/.github/workflows/renovate.yml. The reusable
+# workflow holds the SHA-pinned `renovatebot/github-action` call;
+# this stub stays small so a future Renovate-binary bump is one
+# PR in plugwerk/.github, not three.
+#
+# See plugwerk/plugwerk/docs/adrs/0032-reusable-renovate-workflow.md
+# for the architecture rationale and trade-offs.
+#
+# Cron is Mon-Fri 04:00 UTC (~05:00-06:00 CET/CEST). workflow_dispatch
+# lets any maintainer trigger an on-demand run from the Actions tab
+# or via `gh workflow run renovate.yml`.
+
+name: Renovate
+
+on:
+  schedule:
+    - cron: "0 4 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: "Log level"
+        type: choice
+        default: "info"
+        options:
+          - info
+          - debug
+
+jobs:
+  renovate:
+    uses: plugwerk/.github/.github/workflows/renovate.yml@main
+    permissions:
+      contents: write       # branch + push
+      pull-requests: write  # open + label PRs
+      issues: write         # update Dependency Dashboard issue
+    with:
+      logLevel: ${{ inputs.logLevel || 'info' }}
