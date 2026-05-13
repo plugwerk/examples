@@ -18,11 +18,9 @@ package io.plugwerk.example.cli.command;
 import io.plugwerk.example.cli.DynamicCommandLoader;
 import io.plugwerk.example.cli.PlugwerkCli;
 import io.plugwerk.spi.extension.PlugwerkMarketplace;
+import io.plugwerk.spi.model.InstalledPluginRef;
 import io.plugwerk.spi.model.UpdateInfo;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.pf4j.PluginWrapper;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
@@ -54,12 +52,11 @@ public class UpdateCommand implements Runnable {
   public void run() {
     PlugwerkMarketplace marketplace = parent.getMarketplace();
 
-    // Build a map of installed plugin ID → current version from PF4J plugin manager
-    Map<String, String> installed =
+    // Collect installed plugin id+version pairs from the PF4J plugin manager
+    List<InstalledPluginRef> installed =
         parent.getPluginManager().getPlugins().stream()
-            .collect(
-                Collectors.toMap(
-                    PluginWrapper::getPluginId, pw -> pw.getDescriptor().getVersion()));
+            .map(pw -> new InstalledPluginRef(pw.getPluginId(), pw.getDescriptor().getVersion()))
+            .toList();
 
     if (installed.isEmpty()) {
       System.out.println("No plugins currently installed.");
