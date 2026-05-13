@@ -1,7 +1,7 @@
 [versions]
 plugwerk         = "1.0.0-SNAPSHOT"
 pf4j             = "3.15.0"
-slf4j            = "2.0.17"
+slf4j            = "2.0.18"
 # logback is intentionally NOT pinned here — Spring Boot's BOM owns the version
 # so logback-classic and logback-core stay in lockstep across Boot upgrades.
 spring-boot      = "4.0.6"
