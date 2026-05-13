@@ -18,6 +18,7 @@ package io.plugwerk.example.webapp.controller;
 import io.plugwerk.example.webapp.config.PluginContributionRegistry;
 import io.plugwerk.spi.PlugwerkPlugin;
 import io.plugwerk.spi.extension.PlugwerkMarketplace;
+import io.plugwerk.spi.model.InstalledPluginRef;
 import io.plugwerk.spi.model.UpdateInfo;
 import java.util.List;
 import java.util.Map;
@@ -69,11 +70,10 @@ public class PluginInstalledController {
     // Check for available updates if the marketplace is configured
     if (marketplace != null && !plugins.isEmpty()) {
       try {
-        Map<String, String> installed =
+        List<InstalledPluginRef> installed =
             plugins.stream()
-                .collect(
-                    Collectors.toMap(
-                        PluginWrapper::getPluginId, p -> p.getDescriptor().getVersion()));
+                .map(p -> new InstalledPluginRef(p.getPluginId(), p.getDescriptor().getVersion()))
+                .toList();
         List<UpdateInfo> updates = marketplace.updateChecker().checkForUpdates(installed);
         Map<String, String> updateMap =
             updates.stream()
