@@ -1,4 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>plugwerk/.github"]
+  "extends": ["github>plugwerk/.github"],
+  "packageRules": [
+    {
+      "description": "The examples must always build against the latest Plugwerk SNAPSHOT to surface upstream regressions early. Pinning to a released version (e.g. 1.0.0) would defeat that. The pin is bumped manually only when an examples-repo release of the same name is cut.",
+      "matchDatasources": ["maven"],
+      "matchPackageNames": ["io.plugwerk:**"],
+      "enabled": false
+    }
+  ]
 }
