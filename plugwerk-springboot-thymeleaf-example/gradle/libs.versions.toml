@@ -6,7 +6,7 @@ slf4j            = "2.0.18"
 # so logback-classic and logback-core stay in lockstep across Boot upgrades.
 spring-boot      = "4.0.6"
 spring-dep-mgmt  = "1.1.7"
-spotless         = "8.5.1"
+spotless         = "8.6.0"
 thymeleaf-layout = "4.0.1"
 
 [libraries]
