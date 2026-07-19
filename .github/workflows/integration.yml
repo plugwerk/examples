@@ -46,7 +46,11 @@ jobs:
         uses: gradle/actions/setup-gradle@5e2ebd065dc2488b7a6ad670704656cbbe1e8f60 # v6
 
       - name: Build composite (both examples)
-        run: ./gradlew build
+        # --refresh-dependencies: the runtime jars staged below bundle the
+        # io.plugwerk:*:1.1.0-SNAPSHOT client SDK. Gradle caches changing
+        # (SNAPSHOT) modules for 24h, so a restored cache would ship a stale SDK
+        # to the integration jobs. Force re-resolution to test the latest snapshot.
+        run: ./gradlew build --refresh-dependencies
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
