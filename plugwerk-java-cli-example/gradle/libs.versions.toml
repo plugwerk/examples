@@ -5,7 +5,7 @@ picocli    = "4.7.7"
 slf4j      = "2.0.18"
 logback    = "1.5.38"
 junit      = "6.1.2"
-spotless   = "8.6.0"
+spotless   = "8.8.0"
 
 [libraries]
 plugwerk-spi            = { module = "io.plugwerk:plugwerk-spi",              version.ref = "plugwerk" }
