@@ -48,11 +48,14 @@ case "${http_code}" in
 esac
 
 # 2. Mint a fresh access key. The plain-text "key" field is shown only once.
+# A non-expiring key is requested by omitting "expiresAt" entirely — the server
+# rejects an explicit "expiresAt":null with 400 ("Request body is missing or
+# malformed"), so the field must be left out rather than sent as null.
 echo "[provision-namespace] POST /namespaces/${SLUG}/access-keys" >&2
 key_response=$(curl -fsS -X POST "${BASE_URL}/api/v1/namespaces/${SLUG}/access-keys" \
   -H "Authorization: Bearer ${JWT}" \
   -H 'Content-Type: application/json' \
-  -d "{\"name\":\"ci-${SLUG}-$(date +%s)\",\"expiresAt\":null}")
+  -d "{\"name\":\"ci-${SLUG}-$(date +%s)\"}")
 
 api_key=$(jq -r '.key // empty' <<<"${key_response}")
 if [[ -z "${api_key}" ]]; then
