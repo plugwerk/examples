@@ -47,7 +47,7 @@ jobs:
 
       - name: Build composite (both examples)
         # --refresh-dependencies: the runtime jars staged below bundle the
-        # io.plugwerk:*:1.1.0-SNAPSHOT client SDK. Gradle caches changing
+        # io.plugwerk:*:1.2.0-SNAPSHOT client SDK. Gradle caches changing
         # (SNAPSHOT) modules for 24h, so a restored cache would ship a stale SDK
         # to the integration jobs. Force re-resolution to test the latest snapshot.
         run: ./gradlew build --refresh-dependencies

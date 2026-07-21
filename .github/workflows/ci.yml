@@ -30,7 +30,7 @@ jobs:
 
       - name: Build
         working-directory: plugwerk-java-cli-example
-        # --refresh-dependencies: the examples float on io.plugwerk:*:1.1.0-SNAPSHOT.
+        # --refresh-dependencies: the examples float on io.plugwerk:*:1.2.0-SNAPSHOT.
         # Gradle caches changing (SNAPSHOT) modules for 24h, so without this a
         # restored cache silently tests a stale SDK instead of the latest snapshot.
         run: ./gradlew build --refresh-dependencies
@@ -58,7 +58,7 @@ jobs:
       - name: Build
         working-directory: plugwerk-springboot-thymeleaf-example
         # --refresh-dependencies: see the CLI build job — force re-resolution of
-        # the floating io.plugwerk:*:1.1.0-SNAPSHOT rather than a stale cache.
+        # the floating io.plugwerk:*:1.2.0-SNAPSHOT rather than a stale cache.
         run: ./gradlew build --refresh-dependencies
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
